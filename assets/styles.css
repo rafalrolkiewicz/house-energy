@@ -1,0 +1,66 @@
+/* styles.css */
+
+.container {
+    padding: 20px;
+    margin: 0 auto;
+}
+
+.today-label {
+    text-align: right;
+}
+
+.yield-value {
+    text-align: left;
+}
+
+#gauge-chart {
+    text-align: center;
+}
+
+#yield-bar-chart,
+#yield-line-chart,
+#rooms_temperatures_chart {
+    text-align: center;
+}
+
+.react-datepicker__input-container {
+    display: block;
+    margin: 0 auto;
+}
+
+.react-datepicker-wrapper {
+    display: inline-block;
+}
+
+.react-datepicker__input-container input {
+    text-align: center;
+}
+
+.today-label,
+.yield-value {
+    font-size: 20px;
+}
+
+.date-picker {
+    display: center;
+}
+
+.forward-energy-daily-value {
+    font-size: 20px;
+}
+
+.forward-energy-todays-value {
+    font-size: 20px;
+}
+
+.forward-energy-daily-value {
+    font-size: 18px;
+}
+
+.yield-that-day {
+    font-size: 18px;
+}
+
+.months-sum {
+    font-size: 18px;
+}

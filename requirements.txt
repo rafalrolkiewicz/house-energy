@@ -1,0 +1,12 @@
+python-telegram-bot
+python-dotenv
+selenium
+webdriver_manager
+sqlalchemy
+tuya-connector-python
+schedule
+flask
+flask_sqlalchemy
+dash
+dash_bootstrap_components
+pandas
