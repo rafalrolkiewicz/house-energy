@@ -65,7 +65,7 @@ To install and set up the House Energy Data Dashboard, follow these steps:
 3. Ensure you have the necessary credentials or access tokens for the APIs used and credentials for the power provider platform.
 4. **Accessing the Dashboard Remotely**:
    - Since the dashboard is hosted on home computer, you may want to access it remotely from external devices.
-   - To do this, I recommend using ngrok for port tunneling.
+   - To do this, I am using ngrok for port tunneling.
    - After installing ngrok, run the following command in your terminal to expose the local server to the internet:
      ```
      ngrok http <port_number>
