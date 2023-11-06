@@ -1,3 +1,5 @@
+![Presentation](print_screens/presentation.gif)
+
 # House Energy Data Dashboard
 
 The House Energy Data Dashboard is a data collection and visualization project that fetches data from various APIs and websites related to energy consumption and production. It stores the collected data in an SQLite database and presents it in an interactive web-based dashboard built using Plotly Dash. It is hosted on Raspberry Pi 4.
@@ -89,11 +91,15 @@ Power production in selected day and month:
 
 Electric heater consumption in selected day:
 
-![Heater](print_screens/heater.png)
+![Heater](print_screens/heater_day.png)
+
+Electric heater consumption in selected month:
+
+![Heater](print_screens/heater_month.png)
 
 Power meter reads:
 
-![Electric Meter](print_screens/electric_meter.png)
+![Electric Meter](print_screens/power_meter_bars.png)
 
 Outside and rooms temperature:
 
