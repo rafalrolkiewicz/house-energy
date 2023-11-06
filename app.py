@@ -401,6 +401,35 @@ app.layout = html.Div(
                     ]
                 ),
                 dbc.Row([dcc.Graph(id="heater-chart")]),
+                dbc.Row([html.P(" ")]),
+                dbc.Row([html.P(" ")]),
+                dbc.Row([html.P(" ")]),
+                dbc.Row([html.H5("PICK A MONTH:",
+                                 style={"text-align": "center"})]),
+                dbc.Row([html.P(" ")]),
+                dbc.Row(
+                    [
+                        dcc.Dropdown(
+                            id="month-dropdown_bar_heater",
+                            options=generate_dropdown_options(8, 2023),
+                            value=datetime.now().strftime("%Y-%m"),
+                            placeholder="Select a month",
+                            clearable=False,
+                            style={"width": "150px", "margin": "0 auto"},
+                        ),
+                    ]
+                ),
+                dbc.Row([html.P(" ")]),
+                dbc.Row(
+                    [
+                        html.P(
+                            id="heater-months-sum",
+                            className="months-sum",
+                            style={"text-align": "center"},
+                        )
+                    ]
+                ),
+                dbc.Row([dcc.Graph(id="heater-bar-chart")]),
             ],
         ),
         dbc.Row([html.P(" ")]),
@@ -674,7 +703,7 @@ def update_production_in_day_chart(selected_date):
 
     # Filter the data based on the selected date
     start_time = selected_date
-    end_time = selected_date + pd.offsets.Day()
+    end_time = selected_date + pd.offsets.MonthEnd()
 
     query = (
         session.query(SolaxData.date, SolaxData.live_production)
@@ -728,6 +757,7 @@ def update_production_in_day_chart(selected_date):
             xanchor="left",
             x=0.01),
     )
+    fig.update_xaxes(range=[start_time, end_time])
     fig.update_yaxes(title_text="WATTS")
     fig.update_yaxes(range=[0, 9500])
 
@@ -902,7 +932,7 @@ def update_heater_chart(selected_date):
             y=df_grouped["Hourly_Energy"],
             mode="lines",
             name="Energy Consumption",
-            line=dict(color="blue", shape="spline", smoothing=1),
+            line=dict(color="red", shape="spline", smoothing=1),
         )
     )
 
@@ -919,13 +949,93 @@ def update_heater_chart(selected_date):
             x=0.01),
     )
     fig.update_yaxes(title_text="kWh")
-    fig.update_yaxes(range=[0, 160])
+    fig.update_yaxes(range=[0, 8.5])
 
     return (
         fig,
         f"HEATER CONSUMPTION TODAY: {forward_energy_todays_value} kWh",
         f"SUM {round(heater_that_day, 2)} kWh",
     )
+
+
+@app.callback(
+    Output("heater-bar-chart", "figure"),
+    Output("heater-months-sum", "children"),
+    Input("month-dropdown_bar_heater", "value"),
+)
+def update_heater_in_month_chart(date):
+    """
+    Update the heater consumption bar chart for the selected month and display
+    the total monthly yield.
+
+    This function is a callback that fetches data from the 'TuyaData' table
+    based on the selected month and year. It then creates a Plotly bar chart
+    to display the daily consumption for the selected month and calculates
+    the total monthly consumption. The data is formatted appropriately for updating
+    the bar chart and displaying the total monthly consumption value in a Dash app.
+
+    Parameters:
+        date (str): The selected date in the format 'YYYY-MM'.
+
+    Returns:
+        tuple: A tuple containing two elements:
+            - go.Figure: A Plotly figure containing the consumption bar chart.
+            - str: A string representing the total monthly consumption in kWh.
+    """
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    if date is None:
+        return {}
+
+    # Filter the data based on the selected month and year
+    start_date = pd.to_datetime(f"{date}-01")
+    end_date = start_date + pd.offsets.MonthEnd()
+
+    subquery = (
+        session.query(func.max(TuyaData.date).label("max_date"))
+        .filter(TuyaData.date >= start_date, TuyaData.date <= end_date)
+        .group_by(func.strftime("%Y-%m-%d", TuyaData.date))
+    )
+
+    data = session.query(TuyaData).filter(TuyaData.date.in_(subquery)).all()
+
+    # Create a DataFrame to store the data
+    df = pd.DataFrame(
+        [(item.date.day, item.forward_energy_daily) for item in data],
+        columns=["Day", "Consumption"]
+    )
+    months_sum = round(df["Consumption"].sum(), 2)
+    months_sum = "{:,.2f}".format(months_sum).replace(",", " ")
+
+    # Create the bar chart
+    fig = go.Figure(data=go.Bar(x=df["Day"], y=df["Consumption"]))
+
+    # Add the bar trace
+    for i, consumption_value in enumerate(df["Consumption"]):
+        fig.add_annotation(
+            x=df["Day"][i],
+            y=consumption_value + 4,
+
+            # Convert the consumption value to a string
+            text=str(round(consumption_value, 2)),
+            showarrow=False,  # Hide the arrow
+        )
+
+    fig.update_layout(
+        title_text=f"Month's consumption: {date}",
+        plot_bgcolor="#f5f5f5",
+        title_x=0.5,
+        title_y=0.9,
+    )
+    fig.update_xaxes(range=[start_date, end_date])
+    fig.update_yaxes(title_text="kWh")
+    fig.update_yaxes(range=[0, 160])
+    fig.update_traces(marker=dict(color="red"))
+
+    session.close()
+
+    return fig, f"SUM: {months_sum} kWh"
 
 
 @app.callback(
@@ -994,17 +1104,6 @@ def update_meter_chart(date):
     taken_formatted = "{:,.2f}".format(taken_value).replace(",", " ")
     given_formated = "{:,.2f}".format(given_value).replace(",", " ")
     meter_diff = "{:,.2f}".format(meter_diff).replace(",", " ")
-    """
-    # 4. forward_energy_daily value of given day from tuya_data table
-    subquery = session.query(func.max(TuyaData.date).label("max_date")).\
-        filter(TuyaData.date >= start_date, TuyaData.date <= end_date).\
-        group_by(func.strftime("%Y-%m-%d", TuyaData.date))
-
-    stove_data = session.query(TuyaData)
-    .filter(TuyaData.date.in_(subquery)).all()
-    df_stove = pd.DataFrame([(item.date, item.forward_energy_daily) \
-        for item in stove_data], columns=["Date", "Stove"])
-    """
 
     # Create DataFrames to store the fetched data
     df_taken = pd.DataFrame(taken_daily_data, columns=["Date", "Taken Daily"])
@@ -1014,7 +1113,7 @@ def update_meter_chart(date):
     df_taken["Taken Daily"] = df_taken["Taken Daily"] / 10000
     df_given["Given Daily"] = df_given["Given Daily"] / 10000
 
-    # Create the line chart
+    # Create the bar chart
     fig = go.Figure()
     fig.update_layout(
         bargap=0.2,
@@ -1025,40 +1124,28 @@ def update_meter_chart(date):
             y=-0.24,
             xanchor="right",
             x=0.25),
+        barmode='group'  # This is needed for double bar chart
     )
 
-    # Add the "Taken Daily" line
+    # Add the "Taken Daily" bar
     fig.add_trace(
-        go.Scatter(
+        go.Bar(
             x=df_taken["Date"],
             y=df_taken["Taken Daily"],
-            mode="lines",
             name="Taken",
-            line=dict(color="red", shape="spline", smoothing=0.5),
+            marker_color='red'
         )
     )
 
-    # Add the "Given Daily" line
+    # Add the "Given Daily" bar
     fig.add_trace(
-        go.Scatter(
+        go.Bar(
             x=df_given["Date"],
             y=df_given["Given Daily"],
-            mode="lines",
             name="Given",
-            line=dict(color="green", shape="spline", smoothing=0.5),
+            marker_color='green'
         )
     )
-
-    """
-    # Add the "Last Forward Energy Daily" line
-    fig.add_trace(go.Scatter(
-        x=df_stove["Date"],
-        y=df_stove["Stove"],
-        mode="lines",
-        name="Stove",
-        line=dict(color="blue", shape="spline", smoothing=0.5)
-    ))
-    """
 
     fig.update_layout(
         title_text=f"Month's taken and given: {date}", title_x=0.5, title_y=0.9
@@ -1244,4 +1331,4 @@ def update_temperatures_chart(selected_date):
 
 
 if __name__ == "__main__":
-    app.run_server(host="::", port=8050, debug=True)
+    app.run_server(host="::", port=8050, debug=False)
